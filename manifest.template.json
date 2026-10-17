@@ -1,0 +1,26 @@
+{
+  "schema_version": 2,
+  "id": "ai.agent",
+  "name": "AI Agent",
+  "description": "Local-first AI agent service with Ollama, OpenAI-compatible models, chat and approval-only Core action proposals.",
+  "version": "0.1.0",
+  "core": ">=0.1.174 <1.0.0",
+  "runtime": {
+    "type": "docker",
+    "docker": {"image": "ghcr.io/deadsoulf/home-ai-core-ai@sha256:IMAGE_DIGEST"},
+    "health": {"port": 8080, "path": "/health"}
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "permissions": ["ai.chat", "ai.providers.manage", "ai.actions.approve"],
+  "capabilities": {
+    "requires": ["host.docker"],
+    "provides": ["ai.agent", "ai.chat", "ai.providers"]
+  },
+  "host": {"architectures": ["amd64", "arm64"]},
+  "api": {"namespace": "ai.agent"},
+  "ui": {
+    "navigation": [{"id": "ai.agent", "title": "AI Agent", "route": "/modules/ai.agent", "icon": "brain-circuit", "order": 60}]
+  },
+  "lifecycle": ["install", "upgrade", "remove", "start", "stop", "restart"]
+}

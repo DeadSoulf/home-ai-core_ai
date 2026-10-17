@@ -1,0 +1,10 @@
+.git
+.github
+.gitignore
+.env
+README.md
+tests
+scripts
+manifest.template.json
+__pycache__
+*.sqlite3*

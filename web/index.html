@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>HomeAICore · AI Agent</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark">H</span><div><strong>HomeAICore</strong><small>AI Agent · 0.1</small></div></div>
+    <div class="right"><span class="dot"></span><span id="systemStatus">Ожидание входа</span><button id="lockButton" class="ghost" type="button">Сменить ключ</button></div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sideTitle">РАЗДЕЛЫ</div>
+      <nav aria-label="Навигация">
+        <button class="nav active" data-tab="chat">✦ <span>Чат с агентом</span></button>
+        <button class="nav" data-tab="providers">◈ <span>AI-провайдеры</span></button>
+        <button class="nav" data-tab="approvals">◎ <span>Подтверждения</span> <span id="approvalCount" class="count">0</span></button>
+      </nav>
+      <div class="sideBottom"><strong>Режим безопасности</strong><p>Команды Core пока не исполняются. Подтверждение сохраняет решение, но не изменяет устройства.</p></div>
+    </aside>
+    <main>
+      <div id="notice" class="notice" role="alert" hidden></div>
+      <section id="chat" class="page active">
+        <div class="sectionHeading"><div><div class="eyebrow">ИНТЕЛЛЕКТУАЛЬНЫЙ ПОМОЩНИК</div><h1>Чат с AI-агентом</h1><p>Локальные модели и внешние AI — в одном интерфейсе.</p></div></div>
+        <div class="toolbar"><label>Модель <select id="modelSelect" aria-label="AI-провайдер"></select></label><label>Диалог <select id="conversationSelect" aria-label="Диалог"></select></label><button id="newChat" class="ghost" type="button">+ Новый диалог</button></div>
+        <div class="chatBox"><div id="messages" class="messages" aria-live="polite"><div class="empty">Выберите модель, чтобы начать разговор.</div></div>
+          <form id="chatForm" class="composer"><textarea id="messageInput" aria-label="Сообщение" placeholder="Напишите задачу AI-агенту…" rows="2" maxlength="6000" required></textarea><button id="sendButton" type="submit">Отправить ↗</button></form>
+        </div>
+      </section>
+      <section id="providers" class="page">
+        <div class="sectionHeading"><div><div class="eyebrow">ПОДКЛЮЧЕНИЯ</div><h1>AI-провайдеры</h1><p>Ollama, OpenAI и любой OpenAI-совместимый сервер.</p></div></div>
+        <div class="columns"><div class="panel"><h2>Подключённые модели</h2><div id="providerList" class="stack muted">Подключений пока нет.</div></div>
+        <form id="providerForm" class="panel fields"><h2>Добавить модель</h2>
+          <label>Название <input name="name" placeholder="Например, Домашняя модель" maxlength="80" required></label>
+          <label>Тип <select name="kind" id="kindSelect"><option value="ollama">Ollama (локальный)</option><option value="openai">OpenAI</option><option value="openai_compatible">OpenAI-compatible (llama.cpp / LM Studio / другое)</option></select></label>
+          <label>Адрес API <input name="base_url" id="baseUrl" type="url" value="http://127.0.0.1:11434" required></label>
+          <label>Имя модели <input name="model" placeholder="Например, qwen2.5:7b" maxlength="120" required></label>
+          <label>Ключ API (если требуется) <input name="api_key" type="password" autocomplete="off" placeholder="Не показывается после сохранения"></label>
+          <p class="hint">Адрес должен быть доступен <strong>из контейнера AI</strong>, а не только с вашего компьютера. Для облачного ключа используйте HTTPS.</p>
+          <button type="submit">Добавить провайдера</button>
+        </form></div>
+      </section>
+      <section id="approvals" class="page">
+        <div class="sectionHeading"><div><div class="eyebrow">КОНТРОЛЬ ДЕЙСТВИЙ</div><h1>Подтверждения</h1><p>Решение человека обязательно для операций изменения состояния.</p></div></div>
+        <div class="warning"><strong>Исполнение действий пока отключено.</strong> Подтверждённая заявка останется в статусе «Разрешено, не выполнено». Подключение к защищённому API ядра будет отдельным этапом.</div>
+        <div id="approvalList" class="stack"></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="loginDialog"><form id="loginForm" method="dialog" class="loginFields"><div class="mark large">H</div><h2>Доступ к AI-модулю</h2><p>Введите ключ из <code>/data/access-token</code> или <code>AI_ACCESS_TOKEN</code>. Он не хранится в браузере.</p><input id="accessToken" type="password" autocomplete="off" placeholder="Ключ доступа" required><button type="submit">Подключиться</button><p id="loginError" class="error" role="alert"></p></form></dialog>
+</body>
+</html>

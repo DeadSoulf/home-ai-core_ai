@@ -119,9 +119,11 @@ class LocalOllama:
             "OLLAMA_TMPDIR": "/tmp",
             # CPU-first works on servers without a GPU/toolkit. GPU allocation
             # needs a separately reviewed Core runtime change (no auto-privilege).
-            "CUDA_VISIBLE_DEVICES": "-1",
-            "ROCR_VISIBLE_DEVICES": "-1",
-            "GGML_VK_VISIBLE_DEVICES": "-1",
+            # CPU by default; the privileged Core runtime alone may provide
+            # a verified list of NVIDIA UUIDs when a user explicitly approves.
+            "CUDA_VISIBLE_DEVICES": os.environ.get("CUDA_VISIBLE_DEVICES", "-1"),
+            "ROCR_VISIBLE_DEVICES": os.environ.get("ROCR_VISIBLE_DEVICES", "-1"),
+            "GGML_VK_VISIBLE_DEVICES": os.environ.get("GGML_VK_VISIBLE_DEVICES", "-1"),
         })
         try:
             self.process = subprocess.Popen(

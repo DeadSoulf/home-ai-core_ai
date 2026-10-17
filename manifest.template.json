@@ -2,9 +2,9 @@
   "schema_version": 2,
   "id": "ai.agent",
   "name": "AI Agent",
-  "description": "Local-first AI agent service with Ollama, OpenAI-compatible models, chat and approval-only Core action proposals.",
-  "version": "0.1.0",
-  "core": ">=0.1.174 <1.0.0",
+  "description": "Local-first AI agent with bundled CPU Ollama, automatic Qwen3 0.6B bootstrap, selectable models and external AI providers.",
+  "version": "0.2.0",
+  "core": ">=0.1.189 <1.0.0",
   "runtime": {
     "type": "docker",
     "docker": {"image": "ghcr.io/deadsoulf/home-ai-core-ai@sha256:IMAGE_DIGEST"},

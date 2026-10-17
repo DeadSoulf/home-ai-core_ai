@@ -2,13 +2,13 @@
   "schema_version": 2,
   "id": "ai.agent",
   "name": "AI Agent",
-  "description": "AI Agent preview: local Ollama, OpenAI and compatible chat providers. Protected Core chat UI and Core actions are not yet connected.",
-  "version": "0.1.0",
-  "core": ">=0.1.174 <1.0.0",
+  "description": "Local-first AI agent with bundled CPU Ollama, automatic Qwen3 0.6B bootstrap, selectable models and external AI providers.",
+  "version": "0.2.0",
+  "core": ">=0.1.189 <1.0.0",
   "runtime": {
     "type": "docker",
     "docker": {
-      "image": "ghcr.io/deadsoulf/home-ai-core-ai@sha256:96fc737552d3274fdf5de951b9cc9f615682312d566769ecae717e2a02d0d127"
+      "image": "ghcr.io/deadsoulf/home-ai-core-ai@sha256:dfd347da13731945be057de08e2623f2684c55be8c35b3e9d812a73860107f0f"
     },
     "health": {
       "port": 8080,

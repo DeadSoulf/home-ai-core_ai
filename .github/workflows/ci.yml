@@ -20,3 +20,28 @@ jobs:
         run: |
           docker build -t home-ai-core-ai:test .
           docker run --rm --entrypoint /usr/local/bin/ollama home-ai-core-ai:test --version
+      - name: Managed-container Ollama startup smoke
+        run: |
+          set -euo pipefail
+          docker volume create home-ai-ai-smoke-data
+          trap 'docker rm -f home-ai-ai-smoke >/dev/null 2>&1 || true; docker volume rm home-ai-ai-smoke-data >/dev/null 2>&1 || true' EXIT
+          docker run -d --name home-ai-ai-smoke --read-only \
+            --security-opt no-new-privileges --cap-drop ALL --pids-limit 512 \
+            --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+            --mount type=volume,src=home-ai-ai-smoke-data,dst=/data \
+            home-ai-core-ai:test
+          ready=0
+          for attempt in $(seq 1 40); do
+            if docker exec home-ai-ai-smoke python -c 'import json,urllib.request,pathlib; t=pathlib.Path("/data/access-token").read_text().strip(); req=urllib.request.Request("http://127.0.0.1:8080/api/local/status",headers={"Authorization":"Bearer "+t}); d=json.load(urllib.request.urlopen(req, timeout=3)); assert d["engine_state"]=="ready"' >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != 1 ]; then
+            echo "Ollama did not become ready in hardened module container"
+            docker logs --tail 30 home-ai-ai-smoke
+            exit 1
+          fi
+          echo "Embedded Ollama is running inside the hardened module"
+

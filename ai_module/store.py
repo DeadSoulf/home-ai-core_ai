@@ -75,6 +75,25 @@ class Store:
             ))
         return identifier
 
+    def ensure_local_provider(self, name: str, base_url: str, model: str) -> str:
+        """Register a ready bundled model without duplicating the stored provider.
+
+        Preserve existing user-defined providers and their API keys.
+        """
+        with self.lock, self.db() as db:
+            row = db.execute(
+                "SELECT id FROM providers WHERE kind='ollama' AND base_url=? AND model=?",
+                (base_url, model),
+            ).fetchone()
+            if row:
+                return str(row["id"])
+            identifier = self._id()
+            db.execute(
+                "INSERT INTO providers(id,name,kind,base_url,model,api_key) VALUES(?,?,?,?,?,?)",
+                (identifier, name, "ollama", base_url, model, ""),
+            )
+            return identifier
+
     def delete_provider(self, provider_id: str) -> bool:
         with self.db() as db:
             return db.execute("DELETE FROM providers WHERE id=?", (provider_id,)).rowcount > 0

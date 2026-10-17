@@ -61,6 +61,18 @@ class OllamaBootstrapTests(unittest.TestCase):
                 self.engine.pull(name)
         self.assertEqual(self.engine.status()["model_state"], "waiting")
 
+    def test_supervised_ollama_inherits_explicit_core_gpu_allocation(self):
+        # The container defaults to CPU, but the Core helper can explicitly
+        # assign verified NVIDIA UUIDs without rebuilding/re-downloading models.
+        cuda = "GPU-11111111-1111-1111-1111-111111111111,GPU-22222222-2222-2222-2222-222222222222"
+        with patch.dict(os.environ, {"CUDA_VISIBLE_DEVICES": cuda}):
+            with patch("ai_module.local_ollama.subprocess.Popen") as launch:
+                with patch("ai_module.local_ollama.threading.Thread"):
+                    self.engine.start()
+                self.assertEqual(launch.call_args.kwargs["env"]["CUDA_VISIBLE_DEVICES"], cuda)
+                self.assertEqual(launch.call_args.kwargs["env"]["OLLAMA_HOST"], "127.0.0.1:11434")
+                launch.return_value.poll.return_value = 1
+
     def test_failed_engine_spawn_does_not_kill_agent(self):
         engine = LocalOllama(self.store, executable="/missing/binary", models_dir=self.temp.name)
         engine.start()

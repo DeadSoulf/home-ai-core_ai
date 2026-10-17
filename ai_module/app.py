@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 from . import __version__
 from .providers import ProviderError, chat, validate_action, validate_provider
 from .store import Store, access_token
+from .local_ollama import LocalOllama
 
 SYSTEM_PROMPT = (
     "You are the HomeAICore assistant. Your tools can ONLY prepare a module-action "
@@ -24,7 +25,7 @@ ID = re.compile(r"^[a-f0-9]{32}$")
 WEB_ROOT = Path(__file__).resolve().parent.parent / "web"
 
 
-def handler_factory(store: Store, token: str):
+def handler_factory(store: Store, token: str, local: LocalOllama | None = None):
     class Handler(BaseHTTPRequestHandler):
         server_version = "HomeAICoreAI/" + __version__
 
@@ -93,6 +94,16 @@ def handler_factory(store: Store, token: str):
                 return
             if path == "/api/status":
                 return self._respond(200, {"version": __version__, "providers": len(store.providers()), "approvals_pending": sum(a["status"] == "pending" for a in store.approvals()), "core_actions_enabled": False})
+            if path == "/api/local/status":
+                return self._respond(200, local.status() if local is not None else {"enabled": False, "engine_state": "disabled"})
+            if path == "/api/local/models":
+                if local is None or not local.enabled:
+                    return self._respond(200, {"installed": [], "recommended_models": [], "enabled": False})
+                return self._respond(200, {
+                    "installed": local.installed(),
+                    "recommended_models": local.status()["recommended_models"],
+                    "enabled": True,
+                })
             if path == "/api/providers":
                 return self._respond(200, {"providers": store.providers()})
             if path == "/api/conversations":
@@ -114,6 +125,15 @@ def handler_factory(store: Store, token: str):
                 return
             try:
                 data = self._payload()
+                if path == "/api/local/pull":
+                    if local is None or not local.enabled:
+                        return self._respond(503, {"error": "Local Ollama is not enabled"})
+                    name = data.get("name")
+                    if not isinstance(name, str):
+                        raise ValueError("Model name required")
+                    if not local.pull(name):
+                        return self._respond(409, {"error": "Model download already in progress"})
+                    return self._respond(202, {"queued": True, "name": name})
                 if path == "/api/providers":
                     result = validate_provider(data)
                     identifier = store.add_provider(result)
@@ -176,13 +196,18 @@ def serve(host: str | None = None, port: int | None = None, data_dir: str | None
     os.umask(0o077)  # Restrict SQLite journal files and generated credentials.
     store = Store(data_dir)
     token = access_token(data_dir)
-    server = ThreadingHTTPServer((host, port), handler_factory(store, token))
-    print(f"AI module {__version__} listening on {host}:{port}; Core actions disabled", flush=True)
+    local_enabled = os.environ.get("AI_LOCAL_OLLAMA_ENABLED", "0") == "1"
+    local = LocalOllama(store, enabled=local_enabled, models_dir=os.path.join(data_dir, "ollama", "models"))
+    server = ThreadingHTTPServer((host, port), handler_factory(store, token, local))
+    if local_enabled:
+        local.start()
+    print(f"AI module {__version__} listening on {host}:{port}; local Ollama: {local_enabled}; Core actions disabled", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
+        local.stop()
         server.server_close()
 
 

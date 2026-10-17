@@ -17,4 +17,4 @@ jobs:
       - name: Bytecode check
         run: python -m compileall -q ai_module tests
       - name: Docker build
-        run: docker build -t home-ai-core-ai:test .
+        run: |\n          docker build -t home-ai-core-ai:test .\n          docker run --rm --entrypoint /usr/local/bin/ollama home-ai-core-ai:test --version

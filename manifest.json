@@ -3,12 +3,12 @@
   "id": "ai.agent",
   "name": "AI Agent",
   "description": "CPU-first AI Agent with slim bundled Ollama; automatic Qwen3 0.6B bootstrap, selectable models and optional NVIDIA GPU runtime.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "core": ">=0.1.189 <1.0.0",
   "runtime": {
     "type": "docker",
     "docker": {
-      "image": "ghcr.io/deadsoulf/home-ai-core-ai@sha256:f293ac8deead89561df585b13516b25999bd4a1b103725235c80608919ab86a6"
+      "image": "ghcr.io/deadsoulf/home-ai-core-ai@sha256:a1aafe7d847d284f03d85e3d0162f4704e8bec4c97047768d6992c38e9981f40"
     },
     "health": {
       "port": 8080,

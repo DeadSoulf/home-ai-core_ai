@@ -192,6 +192,10 @@ def handler_factory(store: Store, token: str, local: LocalOllama | None = None):
             if not self._authorized():
                 return
             parts = path.split("/")
+            if len(parts) == 4 and parts[:3] == ["", "api", "conversations"] and ID.fullmatch(parts[3]):
+                if store.delete_conversation(parts[3]):
+                    return self._respond(200, {"deleted": True})
+                return self._respond(404, {"error": "conversation not found"})
             if len(parts) == 4 and parts[:3] == ["", "api", "providers"] and ID.fullmatch(parts[3]):
                 if store.delete_provider(parts[3]):
                     return self._respond(200, {"deleted": True})

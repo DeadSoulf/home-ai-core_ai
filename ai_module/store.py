@@ -106,6 +106,17 @@ class Store:
         with self.db() as db:
             return db.execute("SELECT 1 FROM conversations WHERE id=?", (identifier,)).fetchone() is not None
 
+    def delete_conversation(self, identifier: str) -> bool:
+        """Permanently delete a conversation and its messages in one transaction."""
+        with self.lock, self.db() as db:
+            # Explicit deletion also handles databases created before FK support.
+            existing = db.execute("SELECT 1 FROM conversations WHERE id=?", (identifier,)).fetchone()
+            if existing is None:
+                return False
+            db.execute("DELETE FROM messages WHERE conversation_id=?", (identifier,))
+            db.execute("DELETE FROM conversations WHERE id=?", (identifier,))
+            return True
+
     def new_conversation(self, title: str) -> str:
         identifier = self._id()
         now = int(time.time())

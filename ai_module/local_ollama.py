@@ -105,6 +105,20 @@ class LocalOllama:
         except (ValueError, OSError, urllib.error.URLError):
             return []
 
+    def sync_installed_models(self) -> list[str]:
+        """Reconcile *all* local Ollama models with the chat provider selector.
+
+        The curated presets only limit automatic downloads. They do NOT limit
+        which already-installed Ollama models an administrator may select.
+        Provider creation is idempotent and never removes user-created cloud
+        credentials, conversations, or local model files.
+        """
+        names = self.installed()
+        for name in names[:128]:
+            if len(name) <= 120 and MODEL_NAME.fullmatch(name):
+                self.store.ensure_local_provider(LOCAL_PROVIDER_NAME, INTERNAL_OLLAMA, name)
+        return names
+
     def start(self) -> None:
         if not self.enabled:
             return
@@ -162,10 +176,7 @@ class LocalOllama:
             return
         with self.lock:
             self.engine_state = "ready"
-        names = self.installed()
-        for name in names:
-            if name in MODEL_WHITELIST:
-                self.store.ensure_local_provider(LOCAL_PROVIDER_NAME, INTERNAL_OLLAMA, name)
+        names = self.sync_installed_models()
         if STARTER_MODEL in names:
             with self.lock:
                 self.model_state = "ready"

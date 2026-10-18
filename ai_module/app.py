@@ -93,18 +93,29 @@ def handler_factory(store: Store, token: str, local: LocalOllama | None = None):
             if not self._authorized():
                 return
             if path == "/api/status":
-                return self._respond(200, {"version": __version__, "providers": len(store.providers()), "approvals_pending": sum(a["status"] == "pending" for a in store.approvals()), "core_actions_enabled": False})
+                # Count Ollama models, not just separately configured providers.
+                # None means the local engine is not ready; it does not imply
+                # the user's downloaded model files were removed.
+                local_count = None
+                if local is not None and local.enabled and local.engine_state == "ready":
+                    local_count = len(local.sync_installed_models())
+                return self._respond(200, {"version": __version__, "providers": len(store.providers()),
+                                           "local_models_count": local_count,
+                                           "approvals_pending": sum(a["status"] == "pending" for a in store.approvals()),
+                                           "core_actions_enabled": False})
             if path == "/api/local/status":
                 return self._respond(200, local.status() if local is not None else {"enabled": False, "engine_state": "disabled"})
             if path == "/api/local/models":
                 if local is None or not local.enabled:
                     return self._respond(200, {"installed": [], "recommended_models": [], "enabled": False})
                 return self._respond(200, {
-                    "installed": local.installed(),
+                    "installed": local.sync_installed_models(),
                     "recommended_models": local.status()["recommended_models"],
                     "enabled": True,
                 })
             if path == "/api/providers":
+                if local is not None and local.enabled and local.engine_state == "ready":
+                    local.sync_installed_models()
                 return self._respond(200, {"providers": store.providers()})
             if path == "/api/conversations":
                 return self._respond(200, {"conversations": store.conversations()})

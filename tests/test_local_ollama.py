@@ -69,6 +69,30 @@ class OllamaBootstrapTests(unittest.TestCase):
         self.assertEqual(self.engine.status()["active_model"], STARTER_MODEL)
         self.assertEqual(self.store.providers()[0]["model"], STARTER_MODEL)
 
+    def test_installed_models_outside_presets_appear_in_chat_without_duplicate(self):
+        cloud_id = self.store.add_provider({
+            "name": "Cloud", "kind": "openai",
+            "base_url": "https://api.openai.com/v1", "model": "gpt-test",
+            "api_key": "KEEP_ME",
+        })
+        self.engine.engine_state = "ready"
+        names = ["qwen3:0.6b", "qwen3:8b", "deepseek-r1:7b"]
+        with patch.object(self.engine, "installed", return_value=names):
+            self.assertEqual(self.engine.sync_installed_models(), names)
+            self.assertEqual(self.engine.sync_installed_models(), names)
+        local = [p for p in self.store.providers()
+                 if p["kind"] == "ollama"]
+        self.assertEqual({p["model"] for p in local}, set(names))
+        self.assertEqual(len(local), 3)
+        self.assertEqual(self.store.provider(cloud_id)["api_key"], "KEEP_ME")
+
+    def test_unsafe_installed_name_is_not_registered(self):
+        self.engine.engine_state = "ready"
+        with patch.object(self.engine, "installed",
+                          return_value=["qwen3:4b", "../../invalid", "a" * 150]):
+            self.engine.sync_installed_models()
+        self.assertEqual([p["model"] for p in self.store.providers()], ["qwen3:4b"])
+
     def test_invalid_or_outsize_model_pull_rejected(self):
         self.engine.engine_state = "ready"
         for name in ["../../etc/passwd", "qwen3:999b", "qwen3", "x" * 140]:
@@ -139,6 +163,24 @@ class LocalAPITests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(result["installed"], ["qwen3:0.6b"])
         self.assertGreater(len(result["recommended_models"]), 1)
+
+    def test_status_and_provider_selector_use_actual_installed_models(self):
+        self.engine.engine_state = "ready"
+        names = ["qwen3:0.6b", "qwen3:8b", "deepseek-r1:7b"]
+        with patch.object(self.engine, "installed", return_value=names):
+            _, status = self.fetch("/api/status")
+            self.assertEqual(status["local_models_count"], 3)
+            self.assertEqual(status["providers"], 3)
+            _, models = self.fetch("/api/local/models")
+            self.assertEqual(models["installed"], names)
+            _, providers = self.fetch("/api/providers")
+        self.assertEqual({p["model"] for p in providers["providers"]}, set(names))
+        self.assertTrue(all("api_key" not in p for p in providers["providers"]))
+
+    def test_offline_ollama_does_not_claim_models_deleted(self):
+        self.engine.engine_state = "starting"
+        _, status = self.fetch("/api/status")
+        self.assertIsNone(status["local_models_count"])
 
     def test_pull_only_curated_model_with_authorization(self):
         with patch.object(self.engine, "pull", return_value=True) as start:

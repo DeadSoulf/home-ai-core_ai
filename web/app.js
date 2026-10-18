@@ -67,6 +67,7 @@
       const opt = node('option', '', c.title); opt.value = c.id; $('conversationSelect').append(opt);
     }
     if (current && history.conversations.some(c => c.id === current)) $('conversationSelect').value = current;
+    $('deleteChat').disabled = !$('conversationSelect').value;
     renderProviders();
     await refreshApprovals();
     if (current && $('conversationSelect').value === current) await loadMessages();
@@ -113,9 +114,25 @@
   }
   $('conversationSelect').addEventListener('change', async event => {
     conversationId = event.target.value || null;
+    $('deleteChat').disabled = !conversationId;
     try { await loadMessages(); } catch (error) { notice(error.message); }
   });
-  $('newChat').addEventListener('click', () => { conversationId = null; $('conversationSelect').value = ''; renderMessages([]); });
+  $('newChat').addEventListener('click', () => { conversationId = null; $('conversationSelect').value = ''; $('deleteChat').disabled = true; renderMessages([]); });
+  $('deleteChat').addEventListener('click', async () => {
+    const id = $('conversationSelect').value;
+    if (!id) return;
+    if (!confirm('Удалить диалог полностью? Вся переписка будет безвозвратно удалена. Восстановление невозможно.')) return;
+    $('deleteChat').disabled = true;
+    try {
+      await api('/api/conversations/' + encodeURIComponent(id), 'DELETE');
+      if (conversationId === id) conversationId = null;
+      await refreshAll();
+      notice('Диалог и вся переписка удалены.');
+    } catch (error) {
+      notice(error.message);
+      $('deleteChat').disabled = !$('conversationSelect').value;
+    }
+  });
   $('chatForm').addEventListener('submit', async event => {
     event.preventDefault();
     if (!$('modelSelect').value) return notice('Сначала добавьте AI-провайдера.');

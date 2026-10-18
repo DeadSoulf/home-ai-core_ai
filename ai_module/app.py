@@ -189,7 +189,26 @@ def handler_factory(store: Store, token: str, local: LocalOllama | None = None):
     return Handler
 
 
+def require_compatible_runtime_flavor() -> None:
+    """Fail closed if Core tries to attach a GPU to the CPU-only image.
+
+    The legacy Core GPU reconfiguration reused the existing OCI image. That
+    cannot provide acceleration once GPU runners are intentionally excluded.
+    Failing startup makes the staged helper roll back instead of claiming GPU
+    acceleration even though model inference would still run on CPU.
+    """
+    if os.environ.get("AI_RUNTIME_FLAVOR") != "cpu":
+        return
+    if os.environ.get("CUDA_VISIBLE_DEVICES", "-1") not in ("", "-1", "none", "void"):
+        raise RuntimeError("CPU-only AI image cannot accept GPU devices; update Core to use the optional GPU image")
+    if os.environ.get("ROCR_VISIBLE_DEVICES", "-1") not in ("", "-1"):
+        raise RuntimeError("CPU-only AI image cannot accept ROCm devices")
+    if os.environ.get("GGML_VK_VISIBLE_DEVICES", "-1") not in ("", "-1"):
+        raise RuntimeError("CPU-only AI image cannot accept Vulkan devices")
+
+
 def serve(host: str | None = None, port: int | None = None, data_dir: str | None = None):
+    require_compatible_runtime_flavor()
     host = host or os.environ.get("AI_HOST", "0.0.0.0")
     port = int(port if port is not None else os.environ.get("AI_PORT", "8080"))
     data_dir = data_dir or os.environ.get("AI_DATA_DIR", "/data")

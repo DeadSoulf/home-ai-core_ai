@@ -44,6 +44,30 @@ class ProviderValidationTests(unittest.TestCase):
         self.assertEqual(send.call_count, 1)
 
     @patch("ai_module.providers._post_json")
+    def test_local_qwen3_uses_cpu_friendly_generation_and_extended_timeout(self, send):
+        send.return_value = {"message": {"content": "Привет!"}}
+        answer, proposals = chat({"kind": "ollama", "model": "qwen3:8b",
+                                  "base_url": "http://127.0.0.1:11434", "api_key": ""},
+                                 [{"role": "user", "content": "Привет"}])
+        self.assertEqual(answer, "Привет!")
+        self.assertEqual(proposals, [])
+        payload = send.call_args.args[1]
+        self.assertEqual(payload["think"], False)
+        self.assertEqual(payload["options"]["num_predict"], 512)
+        self.assertEqual(send.call_args.args[3], 195)
+        self.assertTrue(send.call_args.kwargs["direct"])
+
+    @patch("ai_module.providers._post_json")
+    def test_cloud_provider_keeps_short_timeout_and_standard_parameters(self, send):
+        send.return_value = {"choices": [{"message": {"content": "Hello"}}]}
+        chat({"kind": "openai", "model": "gpt-test", "base_url": "https://api.openai.com/v1",
+              "api_key": "secret"}, [{"role": "user", "content": "Hello"}])
+        payload = send.call_args.args[1]
+        self.assertNotIn("think", payload)
+        self.assertEqual(send.call_args.args[3], 45)
+        self.assertFalse(send.call_args.kwargs["direct"])
+
+    @patch("ai_module.providers._post_json")
     def test_http400_retries_without_tools(self, send):
         send.side_effect = [ProviderError("Provider returned HTTP 400"), {"choices": [{"message": {"content": "Ready"}}]}]
         answer, proposals = chat({"kind": "openai_compatible", "model": "test", "base_url": "http://127.0.0.1:8000/v1", "api_key": ""}, [{"role": "user", "content": "hello"}])

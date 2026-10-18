@@ -10,10 +10,13 @@ into persistent `/data`; it is not built into the image.
 
 The publish workflow produces two immutable digests in the *same* public GHCR
 package: **CPU (default)** and **GPU (optional)**. The GPU image retains
-the full upstream runners and is only needed after an administrator explicitly
-approves a compatible NVIDIA GPU allocation. Until Core integrates
-the paired digest for this version, do **not** enable GPU on a CPU-only image:
-simply passing GPU devices is not sufficient when CUDA libraries are absent.
+the full upstream runners and is downloaded only after a compatible NVIDIA GPU
+is detected and an administrator explicitly requests the download.
+**HomeAICore 0.1.194-dev and later** includes the pinned paired-digest switch:
+first select "Download GPU components" and wait for the independent module job,
+then explicitly approve which NVIDIA devices Ollama may use.
+Older Core releases cannot safely accelerate the CPU-only image: simply
+passing GPU devices is not sufficient without CUDA runner libraries.
 Both images use the same AI Agent version, API and persistent data format.
 
 The release pipeline checks the actual image sizes and runs the CPU module

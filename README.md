@@ -1,5 +1,27 @@
 # HomeAICore — AI Agent (`ai.agent`)
 
+## CPU-first variant (0.3.0)
+
+The default OCI image now includes just Ollama's CPU runtime. GPU-specific
+CUDA, ROCm, Vulkan and MLX runner directories are removed in an intermediate
+stage and are **not copied** into the CPU image, reducing initial download
+size. The initial `qwen3:0.6b` model is still downloaded on first start
+into persistent `/data`; it is not built into the image.
+
+The publish workflow produces two immutable digests in the *same* public GHCR
+package: **CPU (default)** and **GPU (optional)**. The GPU image retains
+the full upstream runners and is only needed after an administrator explicitly
+approves a compatible NVIDIA GPU allocation. Until Core integrates
+the paired digest for this version, do **not** enable GPU on a CPU-only image:
+simply passing GPU devices is not sufficient when CUDA libraries are absent.
+Both images use the same AI Agent version, API and persistent data format.
+
+The release pipeline checks the actual image sizes and runs the CPU module
+with Core-equivalent rootless/read-only Docker settings. Installations of
+0.2.0 are **not** silently upgraded or deleted; first verify Core's
+safe module-update support and preserve a backup of the AI data.
+
+
 **0.2.0 — локальная модель при первой установке.** Контейнер включает Ollama
 (официальный образ 0.35.1, закреплённый OCI digest). Он запускает Ollama на
 **127.0.0.1:11434 внутри контейнера**, без публикации порта, и в фоне

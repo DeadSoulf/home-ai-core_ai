@@ -2,8 +2,8 @@
   "schema_version": 2,
   "id": "ai.agent",
   "name": "AI Agent",
-  "description": "Local-first AI agent with bundled CPU Ollama, automatic Qwen3 0.6B bootstrap, selectable models and external AI providers.",
-  "version": "0.2.0",
+  "description": "CPU-first AI Agent with slim bundled Ollama; automatic Qwen3 0.6B bootstrap, selectable models and optional NVIDIA GPU runtime.",
+  "version": "0.3.0",
   "core": ">=0.1.189 <1.0.0",
   "runtime": {
     "type": "docker",

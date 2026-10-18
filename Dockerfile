@@ -39,10 +39,12 @@ CMD ["python", "-m", "ai_module.app"]
 # Optional NVIDIA acceleration variant. This intentionally contains all Ollama
 # runtimes and is downloaded only after an administrator selects a supported GPU.
 FROM common AS gpu
+ENV AI_RUNTIME_FLAVOR=gpu
 COPY --from=ollama /usr/bin/ollama /usr/local/bin/ollama
 COPY --from=ollama /usr/lib/ollama /usr/lib/ollama
 
 # Default module image: CPU-only, small download, works without a GPU driver.
 FROM common AS cpu
+ENV AI_RUNTIME_FLAVOR=cpu
 COPY --from=ollama-cpu /usr/bin/ollama /usr/local/bin/ollama
 COPY --from=ollama-cpu /usr/lib/ollama /usr/lib/ollama

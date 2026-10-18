@@ -27,7 +27,7 @@
       <div id="notice" class="notice" role="alert" hidden></div>
       <section id="chat" class="page active">
         <div class="sectionHeading"><div><div class="eyebrow">ИНТЕЛЛЕКТУАЛЬНЫЙ ПОМОЩНИК</div><h1>Чат с AI-агентом</h1><p>Локальные модели и внешние AI — в одном интерфейсе.</p></div></div>
-        <div class="toolbar"><label>Модель <select id="modelSelect" aria-label="AI-провайдер"></select></label><label>Диалог <select id="conversationSelect" aria-label="Диалог"></select></label><button id="newChat" class="ghost" type="button">+ Новый диалог</button></div>
+        <div class="toolbar"><label>Модель <select id="modelSelect" aria-label="AI-провайдер"></select></label><label>Диалог <select id="conversationSelect" aria-label="Диалог"></select></label><button id="newChat" class="ghost" type="button">+ Новый диалог</button><button id="deleteChat" class="danger ghost" type="button" disabled>Удалить диалог полностью</button></div>
         <div class="chatBox"><div id="messages" class="messages" aria-live="polite"><div class="empty">Выберите модель, чтобы начать разговор.</div></div>
           <form id="chatForm" class="composer"><textarea id="messageInput" aria-label="Сообщение" placeholder="Напишите задачу AI-агенту…" rows="2" maxlength="6000" required></textarea><button id="sendButton" type="submit">Отправить ↗</button></form>
         </div>

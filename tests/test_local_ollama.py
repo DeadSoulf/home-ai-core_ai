@@ -10,7 +10,7 @@ import json
 from http.server import ThreadingHTTPServer
 from unittest.mock import patch
 
-from ai_module.app import handler_factory
+from ai_module.app import handler_factory, require_compatible_runtime_flavor
 from ai_module.local_ollama import (
     INTERNAL_OLLAMA, MODEL_WHITELIST, LocalOllama,
     STARTER_MODEL, available_memory_bytes, model_suggestions,
@@ -18,6 +18,21 @@ from ai_module.local_ollama import (
 from ai_module.store import Store
 
 TOKEN = "secure-test-token-123456789012345678901234567890"
+
+
+class RuntimeFlavorTests(unittest.TestCase):
+    def test_cpu_rejects_accidental_gpu_assignment(self):
+        with patch.dict(os.environ, {"AI_RUNTIME_FLAVOR": "cpu", "CUDA_VISIBLE_DEVICES": "-1",
+                                     "ROCR_VISIBLE_DEVICES": "-1", "GGML_VK_VISIBLE_DEVICES": "-1"}):
+            require_compatible_runtime_flavor()
+            os.environ["CUDA_VISIBLE_DEVICES"] = "GPU-11111111-1111-1111-1111-111111111111"
+            with self.assertRaisesRegex(RuntimeError, "CPU-only"):
+                require_compatible_runtime_flavor()
+
+    def test_gpu_variant_permits_explicit_driver_assignment(self):
+        with patch.dict(os.environ, {"AI_RUNTIME_FLAVOR": "gpu",
+                                     "CUDA_VISIBLE_DEVICES": "GPU-11111111-1111-1111-1111-111111111111"}):
+            require_compatible_runtime_flavor()
 
 
 class OllamaBootstrapTests(unittest.TestCase):

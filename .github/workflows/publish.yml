@@ -25,12 +25,33 @@ jobs:
             type=ref,event=tag
             type=sha
       - uses: docker/build-push-action@v6
-        id: build
+        id: cpu
         with:
           context: .
+          target: cpu
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-      - name: OCI image digest
-        run: echo 'Immutable image digest ${{ steps.build.outputs.digest }}'
+      # The optional GPU build is published under a distinct tag in the SAME
+      # GHCR package, so it inherits the public package's visibility. Only
+      # Core's pinned-digest, admin-approved GPU operation will pull this image.
+      - uses: docker/build-push-action@v6
+        id: gpu
+        with:
+          context: .
+          target: gpu
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/deadsoulf/home-ai-core-ai:gpu-sha-${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+      - name: Verify distinct immutable digests
+        env:
+          CPU_DIGEST: ${{ steps.cpu.outputs.digest }}
+          GPU_DIGEST: ${{ steps.gpu.outputs.digest }}
+        run: |
+          [[ "$CPU_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$GPU_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          test "$CPU_DIGEST" != "$GPU_DIGEST"
+          echo "CPU (default): ghcr.io/deadsoulf/home-ai-core-ai@$CPU_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+          echo "GPU (optional): ghcr.io/deadsoulf/home-ai-core-ai@$GPU_DIGEST" >> "$GITHUB_STEP_SUMMARY"

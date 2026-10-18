@@ -73,13 +73,17 @@ def _endpoint(provider: dict[str, Any]) -> str:
     return provider["base_url"] + "/chat/completions"
 
 
-def _post_json(url: str, payload: dict[str, Any], api_key: str, timeout: int) -> dict[str, Any]:
+def _post_json(url: str, payload: dict[str, Any], api_key: str, timeout: int, *, direct: bool = False) -> dict[str, Any]:
     headers = {"Content-Type": "application/json", "Accept": "application/json"}
     if api_key:
         headers["Authorization"] = "Bearer " + api_key
     request = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        # The embedded loopback Ollama server must not be routed through a
+        # HTTP_PROXY inherited from the host or CI environment.
+        opener = (urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                  if direct else urllib.request.build_opener())
+        with opener.open(request, timeout=timeout) as response:
             raw = response.read(1_048_577)
             if len(raw) > 1_048_576:
                 raise ProviderError("Provider response exceeds 1 MiB")
@@ -94,22 +98,29 @@ def _post_json(url: str, payload: dict[str, Any], api_key: str, timeout: int) ->
         raise ProviderError("Provider connection or response failed") from exc
 
 
-def chat(provider: dict[str, Any], messages: list[dict[str, str]], *, timeout: int = 45) -> tuple[str, list[dict[str, str]]]:
+def chat(provider: dict[str, Any], messages: list[dict[str, str]], *, timeout: int | None = None) -> tuple[str, list[dict[str, str]]]:
+    is_ollama = provider["kind"] == "ollama"
+    # Cold CPU inference can take minutes; external APIs retain a shorter
+    # request budget rather than holding the chat indefinitely.
+    if timeout is None:
+        timeout = 195 if is_ollama else 45
     payload: dict[str, Any] = {"model": provider["model"], "messages": messages, "stream": False, "tools": TOOLS}
-    if provider["kind"] == "ollama":
-        # Ollama supports tools on sufficiently capable model versions.
-        pass
+    if is_ollama:
+        payload["options"] = {"num_predict": 512}
+        # Standard chat need not spend minutes in Qwen3 reasoning mode.
+        if provider["model"].startswith("qwen3:"):
+            payload["think"] = False
     else:
         payload["tool_choice"] = "auto"
     try:
-        value = _post_json(_endpoint(provider), payload, provider["api_key"], timeout)
+        value = _post_json(_endpoint(provider), payload, provider["api_key"], timeout, direct=is_ollama)
     except ProviderError as exc:
         # Older local models may reject tools. Retry only for HTTP 400.
         if "HTTP 400" not in str(exc):
             raise
         payload.pop("tools", None)
         payload.pop("tool_choice", None)
-        value = _post_json(_endpoint(provider), payload, provider["api_key"], timeout)
+        value = _post_json(_endpoint(provider), payload, provider["api_key"], timeout, direct=is_ollama)
     try:
         message = value["message"] if provider["kind"] == "ollama" else value["choices"][0]["message"]
         content = message.get("content") or ""
